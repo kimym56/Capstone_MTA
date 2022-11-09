@@ -51,9 +51,9 @@ export default function App (){
 		p5.background(0);
     success=false;
 		// 도형의 위치 업데이트
-    xpos = xpos + (speed * xdirection/Math.sqrt(Math.pow(xdirection)+Math.pow(ydirection)));
-    ypos = ypos + (speed * ydirection/Math.sqrt(Math.pow(xdirection)+Math.pow(ydirection)));
-    console.log('here',xdirection,ydirection,speed);
+    xpos = xpos + (speed * xdirection/Math.sqrt(Math.pow(xdirection,2)+Math.pow(ydirection,2)));
+    ypos = ypos + (speed * ydirection/Math.sqrt(Math.pow(xdirection,2)+Math.pow(ydirection,2)));
+    console.log('here', Math.pow(xdirection,2)+Math.pow(ydirection,2));
     // 도형이 화면 경계를 넘어가는 지 테스트
     // 넘어갈 경우, -1을 곱하여 방향을 반대로 돌린다.
     if (xpos > p5.width - rad || xpos < rad) {
