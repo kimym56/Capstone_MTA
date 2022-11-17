@@ -1,6 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getStorage} from "firebase/storage";
+import { getFirestore, } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -13,9 +14,10 @@ const firebaseConfig = {
   storageBucket: "capstonemta.appspot.com",
   messagingSenderId: "121494440709",
   appId: "1:121494440709:web:e7bfe41df8b0fad436c56c",
-  measurementId: "G-7RKP4DXT0X"
+  measurementId: "G-7RKP4DXT0X",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
