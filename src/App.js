@@ -5,11 +5,12 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import Sketch from "react-p5";
-import { db,storage ,storageRef} from "./Firebase.js";
+import { db, storage, storageRef } from "./Firebase.js";
 import { collection, addDoc } from "firebase/firestore";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
-import {uploadBytes,ref} from "firebase/storage"
+import { uploadBytes, ref } from "firebase/storage";
 import "./style.css";
+import { Button, Slider } from "@mui/material";
 // class Target extends React.Component{
 //   constructor(props){
 //     super(props);
@@ -30,13 +31,13 @@ import "./style.css";
 export default function App() {
   const [pause, setPause] = useState(true);
   const [name, setName] = useState("");
-  const [inch, setInch] = useState(0);
+  const [inch, setInch] = useState(24);
   const [widthRatio, setWidthRatio] = useState(0);
   const [heightRatio, setHeightRatio] = useState(0);
   const handle = useFullScreenHandle();
   const pxmm =
     Math.sqrt(
-      Math.pow(window.outerWidth, 2) + Math.pow(window.outerHeight, 2)
+      Math.pow(window.innerWidth, 2) + Math.pow(window.innerHeight, 2)
     ) /
     (inch * 25.4);
   //   const [windowSize, setWindowSize] = useState(getWindowSize());
@@ -46,6 +47,7 @@ export default function App() {
   //   return {innerWidth, innerHeight};
   // }
   const onChangePause = (e) => {
+    console.log(document.querySelectorAll("div.fs")[0].style);
     setPause(false);
   };
   const onChangeName = (e) => {
@@ -69,20 +71,21 @@ export default function App() {
   let lastMouseX;
   let lastMouseY;
   let success = false;
+  let click = false;
   let tmp = false;
   let writer;
   let lastTime;
   let count = 0;
 
   const upload = async (e) => {
-    const result = writer.content
-    console.log(writer)
-    const storageRef = ref(storage, name+Date());
+    const result = writer.content.replace(/\n/g, "\r\n");
+    console.log(writer);
+    const storageRef = ref(storage, name + Date() + ".csv");
 
     const fileData = JSON.stringify(result);
-    const blob = new Blob([fileData], { type: "text/plain" });
+    const blob = new Blob([fileData], { type: "text/csv;charset=utf-8;" });
     uploadBytes(storageRef, blob).then((snapshot) => {
-      console.log('Uploaded a blob or file!');
+      console.log("Uploaded a blob or file!");
     });
     // const docRef = await addDoc(collection(db, "data"), {
     //   data: result,
@@ -91,14 +94,17 @@ export default function App() {
   };
 
   const setup = (p5, parentRef) => {
-    p5.createCanvas(window.innerWidth, window.innerHeight).parent(parentRef);
+    if (inch > 20)
+      p5.createCanvas(pxmm * 442.8, pxmm * 249.1).parent(parentRef);
+    else
+      p5.createCanvas(window.innerWidth, window.innerHeight).parent(parentRef);
     p5.frameRate(60);
     p5.ellipseMode(p5.RADIUS);
     xpos = p5.random(1 + rad, p5.width - rad);
     ypos = p5.random(1 + rad, p5.height - rad);
     writer = p5.createWriter("log.csv");
-    writer.print(
-      "timestamp,velocity_target,radius_target,x_pointer,y_pointer,button_state,x_target,y_target,lastMouseX,lastMouseY,xdirection,ydirection,count,name"
+    writer.write(
+      "timestamp,velocity_target,radius_target,x_pointer,y_pointer,button_state,click,x_target,y_target,lastMouseX,lastMouseY,xdirection,ydirection,count,name\n"
     );
 
     p5.background(0);
@@ -136,7 +142,7 @@ export default function App() {
   };
 
   const draw = (p5) => {
-    if (count > 3) {
+    if (count > 399) {
       p5.background(0);
       p5.textSize(p5.height / 10);
       p5.fill(255);
@@ -146,23 +152,24 @@ export default function App() {
       // p5.text(writer.content, p5.width / 2, p5.height / 2);
       upload();
       p5.exit();
+    } else if (tmp == true) {
+      p5.background(0);
+      p5.textSize(window.innerHeight / 20);
+      p5.textAlign("center");
+      p5.text(count + "/400 has completed.", p5.width / 2, p5.height / 2);
+      p5.text("press any key to continue.", p5.width / 2, (3 * p5.height) / 4);
     } else {
-      if (tmp) {
+      
         p5.background(0);
-        p5.rect(0, 0, pxmm * 50, pxmm * 50);
-      } else if (pause === false) {
-        p5.background(0);
-        p5.textSize(10);
+        p5.textSize(window.innerHeight / 80);
+        p5.text(count+' / 400', (9 * p5.width) / 10, p5.height / 10);
 
-        p5.text(window.innerHeight, (3 * p5.width) / 4, p5.height / 5);
-        p5.text(window.innerWidth, (3 * p5.width) / 4, (2 * p5.height) / 5);
-
-        p5.text(
-          Math.floor(p5.millis() - lastTime),
-          (3 * p5.width) / 4,
-          (3 * p5.height) / 5
-        );
-
+        // p5.text((p5.width+' '+window.outerWidth+' '+p5.height+' '+window.outerHeight), (5 * p5.width) / 10, 5 * p5.height / 10);
+        // p5.text(
+        //   Math.floor(p5.millis() - lastTime),
+        //   (3 * p5.width) / 4,
+        //   (3 * p5.height) / 5
+        // );
         success = false;
         // 도형의 위치 업데이트
         xpos =
@@ -203,43 +210,48 @@ export default function App() {
 
         // 도형 그리기
         p5.ellipse(xpos, ypos, rad, rad);
-      }
+
+        writer.write(
+          p5.millis() -
+            lastTime +
+            "," +
+            speed +
+            "," +
+            rad +
+            "," +
+            p5.mouseX +
+            "," +
+            p5.mouseY +
+            "," +
+            success +
+            "," +
+            click+
+            ","+
+            xpos +
+            "," +
+            ypos +
+            "," +
+            lastMouseX +
+            "," +
+            lastMouseY +
+            "," +
+            xdirection +
+            "," +
+            ydirection +
+            "," +
+            count +
+            "," +
+            name+
+            "\n"
+        );
+        lastMouseX = p5.mouseX;
+        lastMouseY = p5.mouseY;
+      
     }
-    writer.print(
-      p5.millis() -
-        lastTime +
-        "," +
-        speed +
-        "," +
-        rad +
-        "," +
-        p5.mouseX +
-        "," +
-        p5.mouseY +
-        "," +
-        success +
-        "," +
-        xpos +
-        "," +
-        ypos +
-        "," +
-        lastMouseX +
-        "," +
-        lastMouseY +
-        "," +
-        xdirection +
-        "," +
-        ydirection +
-        "," +
-        count +
-        "," +
-        name +
-        '\n'
-    );
-    lastMouseX = p5.mouseX;
-    lastMouseY = p5.mouseY;
   };
   const mousePressed = (p5) => {
+    if(tmp==false){
+      click=true;
     if (p5.overBox) {
       p5.fill(255, 255, 0);
       success = true;
@@ -258,7 +270,7 @@ export default function App() {
       // xpos = p5.random(1+rad, p5.width-rad);
       // ypos = p5.random(1+rad, p5.height-rad);
     }
-    writer.print(
+    writer.write(
       p5.millis() -
         lastTime +
         "," +
@@ -272,6 +284,8 @@ export default function App() {
         "," +
         success +
         "," +
+        click+
+            ","+
         xpos +
         "," +
         ypos +
@@ -286,82 +300,130 @@ export default function App() {
         "," +
         count +
         "," +
-        name
+        name+
+        "\n"
     );
+  }
+  click=false
   };
   const mouseReleased = (p5) => {
+    if(tmp==false){
     lastTime = p5.millis();
     if (p5.overBox) {
       p5.fill(255, 255, 0);
       success = true;
-      rad = pxmm*(Math.random() * 15 + 9);
+      rad = pxmm * (Math.random() * 15 + 9);
       xdirection = Math.random() * 2 - 1; // 왼쪽 또는 오른쪽
       ydirection = Math.random() * 2 - 1; // 위 또는 아래
-      speed = pxmm*(Math.random() * 150) / 60;
+      speed = (pxmm * (Math.random() * 150)) / 60;
       xpos = p5.random(1 + rad, p5.width - rad);
       ypos = p5.random(1 + rad, p5.height - rad);
     } else {
       success = false;
-      rad = pxmm*(Math.random() * 15 + 9);
+      rad = pxmm * (Math.random() * 15 + 9);
       xdirection = Math.random() * 2 - 1; // 왼쪽 또는 오른쪽
       ydirection = Math.random() * 2 - 1; // 위 또는 아래
-      speed = pxmm*(Math.random() * 150) / 60;
+      speed = (pxmm * (Math.random() * 150)) / 60;
       xpos = p5.random(1 + rad, p5.width - rad);
       ypos = p5.random(1 + rad, p5.height - rad);
     }
-    if (pause == false) count = count + 1;
+    if (pause == false) {
+      count = count + 1;
+      if(count % 100 == 0)
+        tmp = true;
+    }}
   };
 
   const keyPressed = (p5) => {
-    if (p5.keyCode === p5.LEFT_ARROW) tmp = !tmp;
+    if (p5.key) {
+      tmp = false;
+      p5.redraw();
+    }
   };
   return (
     <div className="App">
-      <FullScreen handle={handle}>
-        {pause ? (
-          <>
-            <h1>The Point-and-Click</h1>
+      <FullScreen handle={handle} className="fs">
+        <div className={pause?"container":"containerPause"}>
+          {pause ? (
+            <>
+              <h1>The Point-and-Click Simulation</h1>
+              <h2>Instructions</h2>
 
-            <h2>
-              {window.innerHeight} {window.innerWidth}
-            </h2>
-            <h2>
-              <span className="header1">Just Click</span>{" "}
-              <span>on the moving target</span>
-              <span> as quickly and accurately as possible</span>
-            </h2>
-            <h2>Input Unique Name and Press Button to start</h2>
-            <span>Monitor inch (e.g.24) : </span>
-            <input type="number" value={inch} onChange={onChangeInch} />
-            <p />
-            {/* <span>Monitor width ratio (e.g.16): </span>
+              <p>
+                <span>
+                1. Press the FULLSCREEN button.
+                <span className="button">
+              <Button variant="contained" onClick={handle.enter}>
+                FullScreen
+              </Button>
+              </span>
+              </span>
+              </p>
+              <p className="margin">
+                2. Determine your monitor screen inch by adjusting the slider
+                against any credit card you have.
+              </p>
+              <p className="header1">
+                (17-32-inch users only can do this test.)
+              </p>
+              <img
+                src={
+                  "https://ck-content.imgix.net/pcm/content/34d7318f7ab26b293f33-chasesapphirepreferred_big.png"
+                }
+                width={pxmm * 85.6}
+                height={pxmm * 53.98}
+                alt="card"
+              />
+              <p>Your moniter is {inch} inches</p>
+              <p className="slider">
+                <Slider
+                  value={typeof inch === "number" ? inch : 0}
+                  onChange={(e) => setInch(e.target.value)}
+                  defaultValue={24}
+                  aria-label="Default"
+                  valueLabelDisplay="auto"
+                  min={17}
+                  max={32}
+                />
+              </p>
+              <p>
+                3. Enter a unique name (survey code) to receive mTurk reward and
+                press the start button.
+              </p>
+              {/* <h3>
+                {window.innerHeight} {window.innerWidth}
+              </h3> */}
+              {/* <span>Monitor width ratio (e.g.16): </span>
           <input type="number" value={widthRatio} onChange={onChangeWidthRatio} />
           <p/>
           <span>Monitor height ratio (e.g.9): </span>
           <input type="number" value={heightRatio} onChange={onChangeHeightRatio} />
           <p/> */}
-            <span>Unique Name: </span>
-            <input type="text" value={name} onChange={onChangeName} />
-            <p />
-            <button onClick={handle.enter}>FullScreen</button>
-            <button
-              onClick={() => {
-                if (inch !== 0 && handle.active) onChangePause(false);
-                else alert("Check inch or fullscreen");
-              }}
-            >
-              Start
-            </button>
-          </>
-        ) : (
-          <Sketch
-            setup={setup}
-            draw={draw}
-            mousePressed={mousePressed}
-            mouseReleased={mouseReleased}
-            keyPressed={keyPressed}
-          />
-        )}
+              <span>Unique Name: </span>
+
+              <input type="text" value={name} onChange={onChangeName} />
+              <span className="button">
+              <Button
+                variant="contained"
+                onClick={() => {
+                  if (inch !== 0 && handle.active) onChangePause(false);
+                  else alert("Check inch or fullscreen");
+                }}
+              >
+                Start
+              </Button>
+              </span>
+            </>
+          ) : (
+            <Sketch
+              setup={setup}
+              draw={draw}
+              mousePressed={mousePressed}
+              mouseReleased={mouseReleased}
+              keyPressed={keyPressed}
+            />
+          )}
+        </div>
       </FullScreen>
     </div>
   );
